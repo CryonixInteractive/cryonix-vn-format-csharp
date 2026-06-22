@@ -1,4 +1,3 @@
 namespace CryonixVnFormat.types;
 
-public interface ICharacter
-{}
+public interface ICharacter;
