@@ -118,7 +118,7 @@ public static partial class CvnReader
                 if (cvnStreamDelegate == null)
                     throw new CvnParserException("Cannot read included file, no resource loader provided");
 
-                var stream = cvnStreamDelegate(fileName);
+                var stream = cvnStreamDelegate(fileName + ".cvnh");
                 var cvnh = ReadHeader(stream, cvnStreamDelegate);
 
                 foreach (var o in cvnh.Overrides)
@@ -314,7 +314,7 @@ public static partial class CvnReader
                 if (cvnStreamDelegate == null)
                     throw new CvnParserException("Cannot read included file, no resource loader provided");
 
-                var stream = cvnStreamDelegate(fileName);
+                var stream = cvnStreamDelegate(fileName + ".cvnh");
                 var cvnh = ReadHeader(stream);
 
                 foreach (var o in cvnh.Overrides)
