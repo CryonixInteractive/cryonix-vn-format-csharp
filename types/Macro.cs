@@ -3,11 +3,10 @@ namespace CryonixVnFormat.types;
 public class Macro : ICharacter
 {
     public required string Identifier { get; init; }
-    public CharacterProfile? Profile { get; init; }
 
     private bool Equals(Macro other)
     {
-        return Identifier == other.Identifier && Equals(Profile, other.Profile);
+        return Identifier == other.Identifier;
     }
 
     public override bool Equals(object? obj)
@@ -20,11 +19,11 @@ public class Macro : ICharacter
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(Identifier, Profile);
+        return Identifier.GetHashCode();
     }
 
     public override string ToString()
     {
-        return $"{nameof(Identifier)}: {Identifier}, {nameof(Profile)}: {Profile}";
+        return $"{nameof(Identifier)}: {Identifier}";
     }
 }
