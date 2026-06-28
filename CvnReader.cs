@@ -132,6 +132,8 @@ public static partial class CvnReader
                 }
 
                 stream.Close();
+                
+                continue;
             }
 
             if (OverrideGen().IsMatch(line))
@@ -328,6 +330,8 @@ public static partial class CvnReader
                 }
 
                 stream.Close();
+                
+                continue;
             }
 
             if (OverrideGen().IsMatch(line))
