@@ -260,7 +260,7 @@ public static partial class CvnReader
 
             return new PredefinedFunction
             {
-                MethodName = name,
+                MethodName = name[1..],
                 Arguments = args
             };
         }
@@ -269,7 +269,7 @@ public static partial class CvnReader
         {
             return new GoToFileLine
             {
-                FileName = line[1..].Trim(),
+                FileName = line[1..].Trim() + ".cvn",
             };
         }
 
