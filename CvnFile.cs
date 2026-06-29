@@ -20,6 +20,6 @@ public class CvnFile : IEnumerable<IFileLine>
 
     public override string ToString()
     {
-        return $"{nameof(Overrides)}: {Overrides}, {nameof(Lines)}: {Lines}";
+        return $"{nameof(Overrides)}: {Overrides}, {nameof(Lines)}: {string.Join(',', Lines)}";
     }
 }

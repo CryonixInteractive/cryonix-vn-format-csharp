@@ -3,10 +3,11 @@ namespace CryonixVnFormat.types;
 public class Macro : ICharacter
 {
     public required string Identifier { get; init; }
+    public Dictionary<string, string> PropertyOverrides { get; init; } = new();
 
     private bool Equals(Macro other)
     {
-        return Identifier == other.Identifier;
+        return Identifier == other.Identifier && PropertyOverrides.Equals(other.PropertyOverrides);
     }
 
     public override bool Equals(object? obj)
@@ -19,11 +20,13 @@ public class Macro : ICharacter
 
     public override int GetHashCode()
     {
-        return Identifier.GetHashCode();
+        return HashCode.Combine(Identifier, PropertyOverrides);
     }
 
     public override string ToString()
     {
-        return $"{nameof(Identifier)}: {Identifier}";
+        return PropertyOverrides.Count == 0
+            ? $"{nameof(Identifier)}: {Identifier}"
+            : $"{nameof(Identifier)}: {Identifier}, {nameof(PropertyOverrides)}: {string.Join(',', PropertyOverrides)}";
     }
 }

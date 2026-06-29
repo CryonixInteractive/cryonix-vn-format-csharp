@@ -32,7 +32,9 @@ public static partial class CvnReader
 
     private const string CharacterProfile = $"{CharName}(:{CharProp}+)?";
     private const string MacroDefinition = $"{Macro}{WhiteSpace}*={WhiteSpace}*{CharacterProfile}";
-    private const string Dialogue = $@"(?:{Macro}|{CharacterProfile}){WhiteSpace}*;{WhiteSpace}*{TextFormat}";
+
+    private const string Dialogue =
+        $@"(?:{Macro}(:{CharProp}+)?|{CharacterProfile}){WhiteSpace}*;{WhiteSpace}*{TextFormat}";
 
     private const string Location = $@"@{DelimitedAlphanumeric}+{WhiteSpace}*<{WhiteSpace}*{TextFormat}";
 
@@ -78,6 +80,7 @@ public static partial class CvnReader
         Content
     }
 
+    #region ReadStream
     public static CvnFile ReadStream(Stream stream)
     {
         using var reader = new StreamReader(stream);
@@ -132,7 +135,7 @@ public static partial class CvnReader
                 }
 
                 stream.Close();
-                
+
                 continue;
             }
 
@@ -169,6 +172,109 @@ public static partial class CvnReader
 
         return cvnFile;
     }
+    #endregion ReadStream
+    
+    #region ReadHeader
+        public static CvnhFile ReadHeader(Stream stream)
+        {
+            using var reader = new StreamReader(stream);
+            return ReadHeader(reader, null);
+        }
+    
+        public static CvnhFile ReadHeader(Stream stream, GetCvnStream? cvnStreamDelegate)
+        {
+            using var reader = new StreamReader(stream);
+            return ReadHeader(reader, cvnStreamDelegate);
+        }
+    
+        public static CvnhFile ReadHeader(StreamReader reader)
+        {
+            return ReadHeader(reader, null);
+        }
+    
+        public static CvnhFile ReadHeader(StreamReader reader, GetCvnStream? cvnStreamDelegate)
+        {
+            var state = ParserState.Include;
+            var cvnhFile = new CvnhFile();
+    
+            while (!reader.EndOfStream)
+            {
+                var line = reader.ReadLine()?.Trim();
+    
+                if (string.IsNullOrEmpty(line)) continue;
+    
+                if (CommentGen().IsMatch(line)) continue;
+    
+                if (IncludeGen().IsMatch(line))
+                {
+                    if (state != ParserState.Include)
+                        throw new CvnParserException("Includes must be added before override or content block");
+    
+                    var fileName = line[1..].Trim();
+    
+                    if (cvnStreamDelegate == null)
+                        throw new CvnParserException("Cannot read included file, no resource loader provided");
+    
+                    var stream = cvnStreamDelegate(fileName + ".cvnh");
+                    var cvnh = ReadHeader(stream);
+    
+                    foreach (var o in cvnh.Overrides)
+                    {
+                        cvnhFile.Overrides[o.Key] = o.Value;
+                    }
+    
+                    foreach (var cvnhLine in cvnh.Lines)
+                    {
+                        cvnhFile.Lines.Add(cvnhLine);
+                    }
+    
+                    stream.Close();
+    
+                    continue;
+                }
+    
+                if (OverrideGen().IsMatch(line))
+                {
+                    if (state == ParserState.Include) state = ParserState.Header;
+                    if (state != ParserState.Header)
+                        throw new CvnParserException("Overrides must be before content block");
+    
+                    if (line.Contains('='))
+                    {
+                        var i = line.IndexOf('=');
+                        var key = line[1..i].Trim();
+                        var value = line[(i + 1)..].Trim();
+                        cvnhFile.Overrides[key] = value;
+                    }
+                    else
+                    {
+                        var key = line[1..].Trim();
+                        cvnhFile.Overrides[key] = "TRUE";
+                    }
+    
+                    continue;
+                }
+    
+                var parseContent = ParseLine(line);
+    
+                switch (parseContent)
+                {
+                    case null:
+                        throw new CvnParserException($"Line \"{line}\" did not match any known construct.");
+                    case SetMacroFileLine macro:
+                        cvnhFile.Lines.Add(macro);
+                        break;
+                    default:
+                        throw new CvnParserException(
+                            "Only includes, overrides, and macro definitions are allowed in cvn header files.");
+                }
+    
+                state = ParserState.Content;
+            }
+    
+            return cvnhFile;
+        }
+        #endregion ReadHeader
 
     public static IFileLine? ParseLine(string? line)
     {
@@ -182,7 +288,27 @@ public static partial class CvnReader
             var key = line[1..i].Trim();
             var value = line[(i + 1)..].Trim();
 
-            var profile = types.CharacterProfile.FromText(value);
+            CharacterProfile profile;
+            if (value.Contains(':'))
+            {
+                var j = value.IndexOf(':');
+                var name = value[..j].Trim();
+                var properties = GetProperties(value[(j + 1)..].Trim());
+                
+                profile = new CharacterProfile
+                {
+                    Name = name,
+                    Properties = properties
+                };
+            }
+            else
+            {
+                profile = new CharacterProfile
+                {
+                    Name = value,
+                    Properties = new Dictionary<string, string>()
+                };
+            }
             return new SetMacroFileLine
             {
                 MacroName = key,
@@ -195,19 +321,35 @@ public static partial class CvnReader
             var i = line.IndexOf(';');
             var key = line[..i].Trim();
             var dialogue = line[(i + 1)..].Trim();
-            ICharacter character;
 
-            if (key[0] == '$')
+            var name = "";
+            var properties = new Dictionary<string, string>();
+            
+            if (key.Contains(':'))
             {
-                var id = key[1..].Trim();
+                var j = key.IndexOf(':');
+                name = key[..j].Trim();
+                properties = GetProperties(key[(j + 1)..].Trim());
+            }
+            else name = key;
+
+            ICharacter character;
+            if (name[0] == '$')
+            {
+                var id = name[1..].Trim();
                 character = new Macro()
                 {
-                    Identifier = id
+                    Identifier = id,
+                    PropertyOverrides = properties
                 };
             }
             else
             {
-                character = types.CharacterProfile.FromText(key);
+                character = new CharacterProfile()
+                {
+                    Name = name,
+                    Properties = properties
+                };
             }
 
             return new DialogueFileLine()
@@ -276,106 +418,19 @@ public static partial class CvnReader
         throw new CvnParserException($"Line \"{line}\" did not match any known construct.");
     }
 
-    public static CvnhFile ReadHeader(Stream stream)
+    public static Dictionary<string, string> GetProperties(string text)
     {
-        using var reader = new StreamReader(stream);
-        return ReadHeader(reader, null);
-    }
-
-    public static CvnhFile ReadHeader(Stream stream, GetCvnStream? cvnStreamDelegate)
-    {
-        using var reader = new StreamReader(stream);
-        return ReadHeader(reader, cvnStreamDelegate);
-    }
-
-    public static CvnhFile ReadHeader(StreamReader reader)
-    {
-        return ReadHeader(reader, null);
-    }
-
-    public static CvnhFile ReadHeader(StreamReader reader, GetCvnStream? cvnStreamDelegate)
-    {
-        var state = ParserState.Include;
-        var cvnhFile = new CvnhFile();
-
-        while (!reader.EndOfStream)
+        var properties = new Dictionary<string, string>();
+        
+        var propText = text.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var property in propText)
         {
-            var line = reader.ReadLine()?.Trim();
-
-            if (string.IsNullOrEmpty(line)) continue;
-
-            if (CommentGen().IsMatch(line)) continue;
-
-            if (IncludeGen().IsMatch(line))
-            {
-                if (state != ParserState.Include)
-                    throw new CvnParserException("Includes must be added before override or content block");
-
-                var fileName = line[1..].Trim();
-
-                if (cvnStreamDelegate == null)
-                    throw new CvnParserException("Cannot read included file, no resource loader provided");
-
-                var stream = cvnStreamDelegate(fileName + ".cvnh");
-                var cvnh = ReadHeader(stream);
-
-                foreach (var o in cvnh.Overrides)
-                {
-                    cvnhFile.Overrides[o.Key] = o.Value;
-                }
-
-                foreach (var cvnhLine in cvnh.Lines)
-                {
-                    cvnhFile.Lines.Add(cvnhLine);
-                }
-
-                stream.Close();
-                
-                continue;
-            }
-
-            if (OverrideGen().IsMatch(line))
-            {
-                if (state == ParserState.Include) state = ParserState.Header;
-                if (state != ParserState.Header)
-                    throw new CvnParserException("Overrides must be before content block");
-
-                if (line.Contains('='))
-                {
-                    var i = line.IndexOf('=');
-                    var key = line[1..i].Trim();
-                    var value = line[(i + 1)..].Trim();
-                    cvnhFile.Overrides[key] = value;
-                }
-                else
-                {
-                    var key = line[1..].Trim();
-                    cvnhFile.Overrides[key] = "TRUE";
-                }
-
-                continue;
-            }
-
-            var parseContent = ParseLine(line);
-
-            switch (parseContent)
-            {
-                case null:
-                    throw new CvnParserException($"Line \"{line}\" did not match any known construct.");
-                case SetMacroFileLine:
-                    cvnhFile.Lines.Add(parseContent);
-                    break;
-                default:
-                    throw new CvnParserException(
-                        "Only includes, overrides, and macro definitions are allowed in cvn header files.");
-            }
-
-            state = ParserState.Content;
+            var j = property.IndexOf('=');
+            properties[property[..j]] = property[(j + 1)..];
         }
 
-        return cvnhFile;
+        return properties;
     }
-
 
     [GeneratedRegex("^" + Comment)]
     private static partial Regex CommentGen();

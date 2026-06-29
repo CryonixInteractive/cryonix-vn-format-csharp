@@ -3,12 +3,12 @@ using CryonixVnFormat.types;
 
 namespace CryonixVnFormat;
 
-public class CvnhFile : IEnumerable<IFileLine>
+public class CvnhFile : IEnumerable<SetMacroFileLine>
 {
     public readonly Dictionary<string, string> Overrides = new();
-    public readonly List<IFileLine> Lines = [];
+    public readonly List<SetMacroFileLine> Lines = [];
     
-    public IEnumerator<IFileLine> GetEnumerator()
+    public IEnumerator<SetMacroFileLine> GetEnumerator()
     {
         return Lines.GetEnumerator();
     }
@@ -20,6 +20,6 @@ public class CvnhFile : IEnumerable<IFileLine>
 
     public override string ToString()
     {
-        return $"{nameof(Overrides)}: {Overrides}, {nameof(Lines)}: {Lines}";
+        return $"{nameof(Overrides)}: {Overrides}, {nameof(Lines)}: {string.Join(',', Lines)}";
     }
 }
