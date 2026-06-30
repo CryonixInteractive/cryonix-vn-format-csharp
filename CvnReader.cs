@@ -386,7 +386,7 @@ public static partial class CvnReader
             if (split.Length <= 1)
                 return new PredefinedFunction
                 {
-                    MethodName = name,
+                    MethodName = name[1..],
                     Arguments = args
                 };
 
