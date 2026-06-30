@@ -12,6 +12,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
 
     steps:
     - uses: actions/checkout@v7
@@ -20,12 +23,12 @@ jobs:
       with:
         dotnet-version: 10.0.x
     - name: Connect to GitHub Packages
-      run: dotnet nuget add source --username Actions --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/CryonixInteractive/index.json"
+      run: dotnet nuget add source --username "GitHub Actions" --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/CryonixInteractive/index.json"
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore -c Release
-    - name: Packclea
+    - name: Pack
       run: dotnet pack -c Release
     - name: Test
       run: dotnet test --no-build --verbosity normal
