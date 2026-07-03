@@ -4,6 +4,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <IsAotCompatible>true</IsAotCompatible>
+        <Version>1.0.2</Version>
     </PropertyGroup>
     <PropertyGroup>
         <PackageId>CryonixVnFormat</PackageId>
