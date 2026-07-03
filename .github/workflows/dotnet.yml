@@ -40,5 +40,5 @@ jobs:
         overwrite: true
         archive: false
     - name: Upload to GitHub Packages
-      run: dotnet nuget push "bin/Release/CryonixVnFormat.1.0.0.nupkg" --api-key ${{ secrets.GITHUB_TOKEN }} --source "github"
+      run: dotnet nuget push bin/Release/CryonixVnFormat.*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "github"
 
