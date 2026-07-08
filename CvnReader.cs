@@ -62,6 +62,7 @@ public static partial class CvnReader
     /// once each variable is recursively resolved to its value,
     /// since pasting a file into regex101 will immediately indicate its validity.
     /// </summary>
+    // ReSharper disable once UnusedMember.Local
     private const string File = $@"^{LineInclude}*{LineHeader}*{LineContent}*{LineGoTo}?";
 
     #endregion // Regex definitions
@@ -322,7 +323,7 @@ public static partial class CvnReader
             var key = line[..i].Trim();
             var dialogue = line[(i + 1)..].Trim();
 
-            var name = "";
+            string name;
             var properties = new Dictionary<string, string>();
             
             if (key.Contains(':'))
